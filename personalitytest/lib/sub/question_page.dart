@@ -1,5 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:flutter/services.dart';
 import '../detail/detail_page.dart';
 
@@ -9,108 +9,87 @@ class QuestionPage extends StatefulWidget {
   const QuestionPage({super.key, required this.question});
 
   @override
-  State<StatefulWidget> createState() {
-    return _QuestionPage();
-  }
+  State<QuestionPage> createState() => _QuestionPageState();
 }
 
-class _QuestionPage extends State<QuestionPage> {
-  String title = '';
-  int selectNumber = -1;
-
-  Future<String> loadAsset(String fileName) async {
-    return await rootBundle.loadString('res/api/$fileName.json');
-  }
+class _QuestionPageState extends State<QuestionPage> {
+  Map<String, dynamic>? questionData;
 
   @override
   void initState() {
     super.initState();
+    loadQuestion();
+  }
+
+  Future<void> loadQuestion() async {
+    final String jsonString = await rootBundle.loadString('res/api/${widget.question}.json');
+    final data = jsonDecode(jsonString);
+    setState(() {
+      questionData = data;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      builder: (context, snapshot) {
-        if (snapshot.hasData == false) {
-          return const CircularProgressIndicator();
-        } else if (snapshot.hasData) {
-          Map<String, dynamic> questions = jsonDecode(snapshot.data!);
-          title = questions['title'].toString();
+    if (questionData == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-          List<Widget> widgets;
-          widgets = List<Widget>.generate(
-            (questions['selects'] as List<dynamic>).length,
-                (int index) => SizedBox(
-              height: 100,
-              child: Column(
-                children: [
-                  Text(questions['selects'][index]),
-                  Radio(
-                    value: index,
-                    groupValue: selectNumber,
-                    onChanged: (value) {
-                      setState(() {
-                        selectNumber = index;
-                      });
-                    },
-                  ),
-                ],
-              ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(questionData!['title']),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              questionData!['question'],
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-          );
-
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(title),
-            ),
-            body: Column(
-              children: [
-                Text(questions['question'].toString()),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: widgets.length,
-                    itemBuilder: (context, index) {
-                      final item = widgets[index];
-                      return item;
+            const SizedBox(height: 20),
+            ...List.generate(questionData!['selects'].length, (index) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DetailPage(
+                            question: questionData!['title'],
+                            answer: questionData!['answer'][index],
+                            selectedIndex: index,
+                            totalOptions: questionData!['selects'].length,
+                          ),
+                        ),
+                      );
                     },
-                  ),
-                ),
-                selectNumber == -1
-                    ? Container()
-                    : ElevatedButton(
-                  onPressed: () {
-                    // 결과 페이지로 이동하기
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (context) {
-                          return DetailPage(
-                            answer: questions['answer'][selectNumber],
-                            question: questions['question'],
-                          );
-                        },
+                  child: Card(
+                    color: const Color(0xFFE6F0FA),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.blue.shade100, width: 1),
+                    ),
+                    elevation: 2,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                      child: Text(
+                        questionData!['selects'][index],
+                        style: const TextStyle(fontSize: 18),
                       ),
-                    );
-                  },
-                  child: const Text('결과 보기'),
+                    ),
+                  ),
                 ),
-              ],
-            ),
-          );
-        } else if (snapshot.hasError) {
-          return Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Center(
-              child: Text(
-                'Error: ${snapshot.error}',
-                style: const TextStyle(fontSize: 15),
-              ),
-            ),
-          );
-        } else {
-          return Container();
-        }
-      },
-      future: loadAsset(widget.question),
+              );
+            }),
+          ],
+        ),
+      ),
     );
   }
 }
