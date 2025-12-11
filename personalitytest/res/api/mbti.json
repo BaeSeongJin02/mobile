@@ -1,11 +1,21 @@
 {
   "title": "5초 MBTI I/E 편",
-  "question": "친구와 함께 간 미술관 당신이라면",
-  "selects": [
-    "말이 많아짐",
-    "생각이 많아짐"
+  "questions": [
+    {
+      "question": "친구와 함께 간 미술관 당신이라면",
+      "selects": [
+        {
+          "text": "말이 많아짐",
+          "score": 0
+        },
+        {
+          "text": "생각이 많아짐",
+          "score": 1
+        }
+      ]
+    }
   ],
-  "answer": [
+  "results": [
     "당신의 성향은 E",
     "당신의 성향은 I"
   ]

@@ -2,16 +2,24 @@
   "questions": [
     {
       "title": "MBTI",
-      "file":"mbti"
+      "file": "mbti"
     },
     {
       "title": "당신은 어떤 사랑을 하고 싶나요",
-      "file":"test2"
+      "file": "test2"
     },
     {
       "title": "당신이 좋아하는 애완동물은",
-      "file":"test1"
+      "file": "test1"
+    },
+    {
+      "title": "[NEW] 나는 어떤 유형의 친구일까?",
+      "file": "friend"
+    },
+    {
+      "title": "[NEW] 나의 스트레스 해소 스타일은?",
+      "file": "stress"
     }
   ],
-  "count": 3
+  "count": 5
 }
