@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../detail/detail_page.dart';
 import '../animations/scale_tap.dart';
+import '../analytics/app_analytics.dart'; // Analytics 추가
 
 class QuestionPage extends StatefulWidget {
   final String question;
@@ -45,8 +47,7 @@ class _QuestionPageState extends State<QuestionPage> {
     final questions = data!["questions"];
     final totalSteps = questions.length;
     final currentQuestion = questions[currentStep];
-
-    double progress = (currentStep + 1) / totalSteps;
+    final double progress = (currentStep + 1) / totalSteps;
 
     return Scaffold(
       appBar: AppBar(
@@ -55,12 +56,10 @@ class _QuestionPageState extends State<QuestionPage> {
             ? IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            if (currentStep > 0) {
-              setState(() {
-                currentStep--;
-                selectedScores.removeLast(); // 이전 선택 제거
-              });
-            }
+            setState(() {
+              currentStep--;
+              selectedScores.removeLast();
+            });
           },
         )
             : null,
@@ -70,7 +69,7 @@ class _QuestionPageState extends State<QuestionPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ///  진행률
+            /// 진행률 바
             LinearProgressIndicator(
               value: progress,
               minHeight: 10,
@@ -79,86 +78,109 @@ class _QuestionPageState extends State<QuestionPage> {
             ),
             const SizedBox(height: 20),
 
-            ///  AnimatedSwitcher로 Fade 애니메이션 추가
+            /// 질문 Fade 애니메이션
             AnimatedSwitcher(
-              duration: const Duration(milliseconds: 500),
+              duration: const Duration(milliseconds: 450),
               transitionBuilder: (child, animation) {
                 return FadeTransition(
                   opacity: animation,
                   child: child,
                 );
               },
-
-              /// AnimatedSwitcher는 child의 key가 달라야 애니메이션을 적용함
               child: Column(
                 key: ValueKey(currentStep),
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ///  질문
+                  /// 질문 텍스트
                   Text(
                     currentQuestion["question"],
                     style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 20),
 
-                  ///  선택지
-                  ...List.generate(currentQuestion["selects"].length, (index) {
-                    final item = currentQuestion["selects"][index];
+                  /// 선택지 목록
+                  ...List.generate(
+                    currentQuestion["selects"].length,
+                        (index) {
+                      final item = currentQuestion["selects"][index];
 
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: ScaleTap(
-                        onTap: () {
-                          selectedScores.add(item["score"]);
+                      return Padding(
+                        padding:
+                        const EdgeInsets.symmetric(vertical: 8),
+                        child: ScaleTap(
+                          onTap: () async {
+                            final score = item["score"];
+                            selectedScores.add(score);
 
-                          if (currentStep == totalSteps - 1) {
-                            /// 최종 결과 계산
-                            int finalScore = (selectedScores.reduce((a, b) => a + b) /
-                                totalSteps)
-                                .round();
-
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DetailPage(
-                                  question: data!["title"],
-                                  answer: data!["results"][finalScore],
-                                  selectedIndex: finalScore,
-                                  totalOptions: 4,
-                                ),
-                              ),
+                            /// Analytics: 질문 선택
+                            await AppAnalytics.logQuestionAnswered(
+                              testName: data!["title"],
+                              step: currentStep + 1,
+                              selectedScore: score,
                             );
-                          } else {
-                            setState(() {
-                              currentStep++;
-                            });
-                          }
-                        },
-                        child: Card(
-                          color: const Color(0xFFE6F0FA),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                              color: Colors.blue.shade100,
-                              width: 1.2,
+
+                            if (currentStep == totalSteps - 1) {
+                              /// 최종 점수 계산
+                              final int finalScore =
+                              (selectedScores.reduce((a, b) => a + b) /
+                                  totalSteps)
+                                  .round();
+
+                              /// Analytics: 테스트 완료
+                              await AppAnalytics.logTestCompleted(
+                                testName: data!["title"],
+                                resultIndex: finalScore,
+                              );
+
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => DetailPage(
+                                    question: data!["title"],
+                                    answer:
+                                    data!["results"][finalScore],
+                                    selectedIndex: finalScore,
+                                    totalOptions: 4,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              setState(() {
+                                currentStep++;
+                              });
+                            }
+                          },
+                          child: Card(
+                            color: const Color(0xFFE6F0FA),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                              BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: Colors.blue.shade100,
+                                width: 1.2,
+                              ),
                             ),
-                          ),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 20,
-                              horizontal: 16,
-                            ),
-                            child: Text(
-                              item["text"],
-                              style: const TextStyle(fontSize: 18),
+                            child: Container(
+                              width: double.infinity,
+                              padding:
+                              const EdgeInsets.symmetric(
+                                vertical: 20,
+                                horizontal: 16,
+                              ),
+                              child: Text(
+                                item["text"],
+                                style:
+                                const TextStyle(fontSize: 18),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  })
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
